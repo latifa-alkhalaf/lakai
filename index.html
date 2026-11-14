@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>الحوكمة الذكية</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#391A56">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="الحوكمة الذكية">
+<style>
+  html,body{margin:0;height:100%;background:#391A56;font-family:Tahoma,sans-serif;color:#fff}
+  iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff;
+         padding-top:env(safe-area-inset-top);box-sizing:border-box}
+  .msg{display:none;position:fixed;inset:0;background:#391A56;text-align:center;padding:48px 24px}
+  .msg img{width:96px;height:96px;border-radius:22px;display:block;margin:0 auto 18px}
+  .msg b{display:block;font-size:20px;margin-bottom:10px}
+  .msg input{width:100%;max-width:420px;height:44px;margin-top:16px;padding:0 12px;border:1px solid #8E5BF0;border-radius:10px;font-size:14px;direction:ltr;box-sizing:border-box}
+  .msg button{margin-top:14px;height:42px;padding:0 28px;border:0;border-radius:21px;background:linear-gradient(90deg,#2FD3E3,#8E5BF0);color:#fff;font-size:15px}
+  #err{color:#FFC9C2;font-size:13px;margin-top:10px;min-height:18px}
+</style>
+</head>
+<body>
+<!-- رابط المنصة لا يُكتب في هذا الملف: يُحفظ في الجهاز فقط عند أول فتح -->
+<div id="setup" class="msg"><img src="icons/icon-192.png" alt=""><b>إعداد لمرة واحدة</b>الصق الرابط الذي وصلك كاملًا ثم اضغط «حفظ»
+  <br><input id="lnk" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec?page=...">
+  <div id="err"></div><button onclick="saveLink()">حفظ</button></div>
+<div id="off" class="msg"><b>لا يوجد اتصال بالإنترنت</b>الحوكمة الذكية تحتاج اتصالًا بالإنترنت.<br><button onclick="location.reload()">إعادة المحاولة</button></div>
+<script>
+  const KEY = 'lakai_k';   // مفتاح مستقل عن تطبيق «الحوكمة» (نفس النطاق)
+  const store = { get(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } },
+                  set(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} } };
+  // يقبل الرابط كاملًا (مع ?page=...) ويعيد {id, page} أو null
+  function parseLink(t){
+    t = (t || '').trim();
+    const m = t.match(/script\.google\.com\/macros\/s\/([\w-]{20,})\/exec(?:\?page=([\w-]{1,40}))?/);
+    return m ? { id: m[1], page: m[2] || '' } : null;
+  }
+  function start(c){
+    document.getElementById('setup').style.display = 'none';
+    const f = document.createElement('iframe');
+    f.title = 'الحوكمة الذكية'; f.allow = 'camera; microphone; clipboard-write';
+    f.src = 'https://script.google.com/macros/s/' + c.id + '/exec' + (c.page ? '?page=' + encodeURIComponent(c.page) : '');
+    document.body.appendChild(f);
+  }
+  function saveLink(){
+    const c = parseLink(document.getElementById('lnk').value);
+    if (!c) { document.getElementById('err').textContent = 'الرابط غير صحيح، انسخه كاملًا من الرسالة'; return; }
+    store.set(c); start(c);
+  }
+  // رابط الإعداد: .../#k=المعرّف&p=الصفحة  (يُحفظ ثم يُمسح من شريط العنوان)
+  const h = location.hash.match(/^#k=([\w-]{20,})(?:&p=([\w-]{1,40}))?$/);
+  if (h) { store.set({ id: h[1], page: h[2] || '' }); history.replaceState(null, '', location.pathname); }
+  const c = store.get();
+  if (c && c.id) start(c); else document.getElementById('setup').style.display = 'block';
+
+  const off = document.getElementById('off');
+  function chk(){ off.style.display = navigator.onLine ? 'none' : 'block'; }
+  addEventListener('online', () => location.reload()); addEventListener('offline', chk); chk();
+  if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
