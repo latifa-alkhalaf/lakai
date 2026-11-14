@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>الحوكمة الذكية</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#391A56">
 <meta name="mobile-web-app-capable" content="yes">
@@ -49,13 +50,23 @@
   function saveLink(){
     const c = parseLink(document.getElementById('lnk').value);
     if (!c) { document.getElementById('err').textContent = 'الرابط غير صحيح، انسخه كاملًا من الرسالة'; return; }
-    store.set(c); start(c);
+    store.set(c); keepInUrl(c); start(c);
   }
-  // رابط الإعداد: .../#k=المعرّف&p=الصفحة  (يُحفظ ثم يُمسح من شريط العنوان)
-  const h = location.hash.match(/^#k=([\w-]{20,})(?:&p=([\w-]{1,40}))?$/);
-  if (h) { store.set({ id: h[1], page: h[2] || '' }); history.replaceState(null, '', location.pathname); }
-  const c = store.get();
-  if (c && c.id) start(c); else document.getElementById('setup').style.display = 'block';
+  // رابط الإعداد: .../#k=المعرّف&p=الصفحة — يُحفظ في الجهاز ويبقى في شريط العنوان
+  // حتى تحمله أيقونة آيفون عند «إضافة إلى الشاشة الرئيسية» فلا يُطلب اللصق مرة ثانية
+  function fromHash(){
+    const m = location.hash.match(/^#k=([\w-]{20,})(?:&p=([\w-]{1,40}))?$/);
+    return m ? { id: m[1], page: m[2] || '' } : null;
+  }
+  function keepInUrl(c){
+    const want = '#k=' + c.id + (c.page ? '&p=' + c.page : '');
+    if (location.hash !== want) history.replaceState(null, '', location.pathname + want);
+  }
+  const hc = fromHash();
+  if (hc) store.set(hc);
+  const c = hc || store.get();
+  if (c && c.id) { keepInUrl(c); start(c); } else document.getElementById('setup').style.display = 'block';
+  addEventListener('hashchange', () => { const n = fromHash(); if (n) { store.set(n); location.reload(); } });
 
   const off = document.getElementById('off');
   function chk(){ off.style.display = navigator.onLine ? 'none' : 'block'; }
